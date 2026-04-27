@@ -1,0 +1,82 @@
+# =========================
+# 🔹 Python
+# =========================
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+*.so
+*.egg
+*.egg-info/
+dist/
+build/
+.eggs/
+
+# Virtual environments
+venv/
+.env/
+.venv/
+ENV/
+env/
+
+# Python logs
+*.log
+
+# =========================
+# 🔹 Environment variables
+# =========================
+.env
+.env.*
+*.env
+
+# =========================
+# 🔹 FastAPI / Uvicorn
+# =========================
+*.db
+*.sqlite3
+
+# =========================
+# 🔹 Node.js / Next.js
+# =========================
+node_modules/
+.next/
+out/
+build/
+
+# Logs
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# =========================
+# 🔹 VS Code
+# =========================
+.vscode/
+*.code-workspace
+
+# =========================
+# 🔹 OS files
+# =========================
+.DS_Store
+Thumbs.db
+
+# =========================
+# 🔹 Git
+# =========================
+*.orig
+
+# =========================
+# 🔹 Testing / coverage
+# =========================
+.coverage
+coverage/
+htmlcov/
+.pytest_cache/
+
+# =========================
+# 🔹 Misc
+# =========================
+*.tmp
+*.swp
+*.bak
