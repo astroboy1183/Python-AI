@@ -183,53 +183,135 @@ python 07_RAG/query.py
 
 An extended RAG pipeline that introduces a job queue so queries are processed asynchronously in the background. Includes a FastAPI backend and a React frontend.
 
-**Infrastructure:** `docker-compose.yml` runs three services:
+### Folder Structure
+
+```
+08_RAG_queue/
+├── docker-compose.yml    — infrastructure
+├── .env                  — OpenAI API key
+├── index.py              — PDF ingestion (run once)
+├── client/
+│   └── rq_client.py      — CLI client (alternative to frontend)
+├── queues/
+│   ├── __init__.py       — makes queues a Python package
+│   ├── main.py           — starts the FastAPI server
+│   ├── server.py         — API routes
+│   └── worker.py         — RAG logic (runs in background)
+└── frontend/
+    └── src/App.jsx       — React UI
+```
+
+---
+
+### docker-compose.yml — Infrastructure
+
+Runs 3 containers:
+
 | Container | Port | Purpose |
 |---|---|---|
 | Valkey (Redis) | `6379` | Job queue and result store |
-| Qdrant | `6333` | Vector database |
-| Redis Insight | `5540` | Visual browser for Redis data |
+| Qdrant | `6333` | Vector database for PDF embeddings |
+| Redis Insight | `5540` | Visual browser to inspect Valkey data |
 
-### Architecture
+---
+
+### index.py — PDF Ingestion (run once)
+
+This is the setup step. It:
+1. Loads the PDF page by page using `PyPDFLoader`
+2. Splits it into chunks of 1500 characters with 200 character overlap using `RecursiveCharacterTextSplitter`
+3. Sends each chunk to OpenAI `text-embedding-3-small` to convert text → vector numbers
+4. Stores all vectors in Qdrant under a collection called `node_js_guide`
+
+After this runs, Qdrant holds the entire PDF as searchable vectors. You only need to run this once.
+
+---
+
+### queues/ — The Backend Package
+
+#### `__init__.py`
+Empty file. Tells Python that `queues` is a package so relative imports like `from .server import app` work.
+
+#### `main.py` — Server Entry Point
+Starts the FastAPI server via uvicorn on port `8000`. Run with:
+```bash
+python -m queues.main
+```
+
+#### `server.py` — API Routes
+
+Three routes:
+
+- **`GET /`** — health check, returns `{"status": "server up and running"}`
+- **`POST /query`** — receives `{"query": "..."}`, puts it on the Valkey queue, and immediately returns a `job_id`. Does not wait for the answer.
+- **`GET /result/{job_id}`** — checks Valkey for the job status. Returns `pending`, `completed` with the answer, or `failed`.
+
+CORS middleware is added so the React frontend on port `5173` is allowed to talk to the server on port `8000`.
+
+#### `worker.py` — The RAG Brain
+
+This is the most important file. The `process_query` function runs when a job is picked up from the queue:
+
+1. **Similarity search** — embeds the query and searches Qdrant for the 8 most similar chunks from the PDF
+2. **Score filtering** — drops any chunk with a relevance score below 0.3. Falls back to top 3 if all score low
+3. **Context building** — formats the retrieved chunks with their page numbers and scores
+4. **LLM call** — sends the context + question to `gpt-4o` and instructs it to cite page numbers
+5. **Returns** the answer string, which RQ stores back in Valkey
+
+---
+
+### client/rq_client.py — CLI Client
+
+A terminal-based alternative to the React frontend. Connects directly to Valkey and enqueues jobs via the RQ Queue.
+
+---
+
+### frontend/src/App.jsx — React UI
+
+Two pieces of state:
+- `query` — what the user is typing
+- `jobs` — list of all submitted queries and their current status/result
+
+**`submitQuery()`**
+- Sends `POST /query` to the FastAPI server
+- Gets back a `job_id` instantly
+- Adds the job to the `jobs` list with status `pending`
+- Clears the input so you can type another query immediately
+- Starts polling for that job's result
+
+**`pollResult(jobId)`**
+- Calls `GET /result/{job_id}` every 1.5 seconds
+- When status becomes `completed` or `failed`, stops polling and updates the job card with the answer
+
+**UI**
+- Each submitted query shows as a card with a colour-coded badge — yellow for pending, green for completed, red for failed
+- Multiple queries can be submitted at once, each tracked independently
+
+---
+
+### The Full Flow
 
 ```
-React Frontend :5173
-      ↓
-FastAPI Server :8000
-      ↓
-Valkey Queue  :6379
-      ↓
-RQ Worker (background process)
-      ↓
-Qdrant :6333  →  OpenAI API
-      ↓
-Result stored back in Valkey
-      ↓
-React Frontend polls and displays result
+1. User types query in React UI
+           ↓
+2. POST /query → FastAPI server
+           ↓
+3. Job pushed to Valkey queue → job_id returned instantly
+           ↓
+4. RQ Worker picks up the job
+           ↓
+5. Qdrant similarity search (top 8 chunks, filtered by score)
+           ↓
+6. gpt-4o generates answer using chunks as context
+           ↓
+7. Answer stored back in Valkey
+           ↓
+8. React polls GET /result/{job_id} every 1.5s
+           ↓
+9. Answer displayed in the UI card
 ```
 
-### Files
-
-**`index.py`** — Ingests the PDF into Qdrant (same as 07_RAG but self-contained).
-
-**`queues/worker.py`** — The RQ worker function `process_query(query)`:
-- Runs similarity search on Qdrant (top 8 chunks, filtered by relevance score ≥ 0.3)
-- Calls `gpt-4o` with retrieved context
-- Returns the answer with page citations
-
-**`queues/server.py`** — FastAPI server with three routes:
-- `GET /` — health check
-- `POST /query` — enqueues a job, returns `job_id` immediately
-- `GET /result/{job_id}` — returns job status (`pending` / `completed` / `failed`) and result
-
-**`queues/main.py`** — Entry point that starts the FastAPI server via uvicorn.
-
-**`client/rq_client.py`** — CLI client that enqueues a query and polls until the result is ready.
-
-**`frontend/`** — React (Vite) app that:
-- Lets you submit multiple queries without waiting
-- Polls every 1.5 seconds per job
-- Shows each query as a card with a live status badge (pending → completed)
+---
 
 ### Running the full pipeline
 
