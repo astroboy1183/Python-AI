@@ -1,29 +1,223 @@
 # Python AI
 
-A progressive series of AI and LLM projects built with Python, covering tokenization, prompting techniques, local models, AI agents, and RAG pipelines.
+A progressive series of AI and LLM projects built with Python — covering tokenization, prompting techniques, local models, AI agents, RAG pipelines, async job queues, multimodal inputs, graph-based agents (LangGraph), and persistent memory (mem0).
+
+Designed as a learning track: start at `01_Tokenization` and work your way to `11_memory_agent`.
 
 ---
 
-## Project Structure
+## Table of Contents
 
+1. [Quick Start](#quick-start)
+2. [System Requirements](#system-requirements)
+3. [Getting Started](#getting-started)
+4. [API Keys](#api-keys)
+5. [Per-Project Overview](#per-project-overview)
+6. [Port Reference](#port-reference)
+7. [Project Details](#project-details)
+8. [Troubleshooting](#troubleshooting)
+9. [Tips & Conventions](#tips--conventions)
+
+---
+
+## Quick Start
+
+For the impatient — get something running in 5 minutes:
+
+**Windows (PowerShell):**
+```powershell
+git clone git@github.com:astroboy1183/Python-AI.git
+cd Python-AI
+python -m venv venv
+venv\Scripts\activate
+pip install -r requirements.txt
+# add your OpenAI key to .env (see "API Keys" section)
+python 01_Tokenization\main.py
 ```
-Python-AI/
-├── 01_Tokenization/
-├── 02_hello_world/
-├── 03_ollama_fastapi/
-├── 04_huggingface/
-├── 05_weather_agent/
-├── 06_cli_agent/
-├── 07_RAG/
-├── 08_RAG_queue/
-├── 09_multimodal_ai/
-├── 10_langgraph/
-└── 11_memory_agent(mem0)/
+
+**Mac / Linux (Bash/Zsh):**
+```bash
+git clone git@github.com:astroboy1183/Python-AI.git
+cd Python-AI
+python -m venv venv
+source venv/bin/activate
+pip install -r requirements.txt
+# add your OpenAI key to .env (see "API Keys" section)
+python 01_Tokenization/main.py
 ```
 
 ---
 
-## 01 — Tokenization
+## System Requirements
+
+### All platforms
+- **Python 3.10 or higher** ([python.org/downloads](https://www.python.org/downloads/))
+- **Git** ([git-scm.com](https://git-scm.com/))
+- **Docker Desktop** (required for projects 07–11) ([docker.com/products/docker-desktop](https://www.docker.com/products/docker-desktop/))
+- **Node.js 18+** (only needed for `08_RAG_queue` React frontend) ([nodejs.org](https://nodejs.org/))
+- ~15 GB free disk space (projects `04_huggingface` downloads large models)
+
+### Windows-specific
+- Use **PowerShell** or **Windows Terminal** — avoid CMD where possible.
+- **Docker Desktop** requires **WSL2** enabled. Follow Microsoft's [WSL install guide](https://learn.microsoft.com/en-us/windows/wsl/install) first.
+- The Python launcher might be called `py` instead of `python`. If `python` doesn't work, try `py`.
+- Folder `11_memory_agent(mem0)` has parentheses — always quote it in commands: `cd "11_memory_agent(mem0)"`.
+
+### Mac-specific
+- Install via **Homebrew** for the smoothest experience:
+  ```bash
+  brew install python git docker node
+  brew install --cask docker
+  ```
+- On Apple Silicon (M1/M2/M3), all projects work without additional config.
+
+### Linux-specific
+- Most distributions have Python 3.10+ pre-installed. Verify with `python3 --version`.
+- Install Docker Engine via your package manager:
+  ```bash
+  sudo apt install docker.io docker-compose-plugin   # Ubuntu/Debian
+  sudo systemctl start docker
+  sudo usermod -aG docker $USER && newgrp docker     # avoid using sudo with docker
+  ```
+
+---
+
+## Getting Started
+
+### 1. Clone the repository
+
+```bash
+git clone git@github.com:astroboy1183/Python-AI.git
+cd Python-AI
+```
+
+### 2. Create and activate a virtual environment
+
+**Windows (PowerShell):**
+```powershell
+python -m venv venv
+venv\Scripts\activate
+```
+If activation is blocked by execution policy, run once per session:
+```powershell
+Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass
+```
+
+**Mac / Linux:**
+```bash
+python -m venv venv
+source venv/bin/activate
+```
+
+You should see `(venv)` in your prompt confirming it's active.
+
+### 3. Install Python dependencies
+
+```bash
+pip install -r requirements.txt
+```
+
+> **Note:** Some folders (e.g. `10_langgraph/`) have their own `requirements.txt` with project-specific additions. The root one covers all common packages. Re-run `pip install -r <folder>/requirements.txt` if a folder has its own.
+
+### 4. Verify Docker is running (for projects 07+)
+
+```bash
+docker --version
+docker ps
+```
+
+If `docker ps` errors out with "Cannot connect to the Docker daemon", start Docker Desktop (or `sudo systemctl start docker` on Linux).
+
+---
+
+## API Keys
+
+Each project that calls an LLM API needs its own `.env` file **in the same folder as the script**. The `load_dotenv(...)` calls look for `.env` relative to the script.
+
+### Required keys per project
+
+| Project | Keys needed |
+|---|---|
+| `02_hello_world` | `OPENAI_API_KEY`, optionally `GEMINI_API_KEY` |
+| `05_weather_agent` | `OPENAI_API_KEY` |
+| `06_cli_agent` | `OPENAI_API_KEY` |
+| `07_RAG` | `OPENAI_API_KEY` |
+| `08_RAG_queue` | `OPENAI_API_KEY` |
+| `09_multimodal_ai` | `OPENAI_API_KEY` |
+| `10_langgraph` | `OPENAI_API_KEY`, `GEMINI_API_KEY` (only for `conditional.py`) |
+| `11_memory_agent(mem0)` | `OPENAI_API_KEY` |
+
+`01_Tokenization`, `03_ollama_fastapi`, and `04_huggingface` need **no API keys** — they run locally.
+
+### Where to get the keys
+
+| Provider | Get a key from |
+|---|---|
+| **OpenAI** | https://platform.openai.com/api-keys (requires billing setup) |
+| **Google Gemini** | https://aistudio.google.com/apikey (free tier available) |
+
+### Creating `.env` files
+
+Create a file named `.env` (not `env` or `env.txt`) in the project folder. Example for `10_langgraph/.env`:
+
+```
+OPENAI_API_KEY=sk-proj-your-key-here
+GEMINI_API_KEY=AIza-your-key-here
+```
+
+> **Security:** `.env` files are already in `.gitignore` and will never be committed. Never share or commit these keys.
+
+---
+
+## Per-Project Overview
+
+| # | Project | Needs Docker | Needs API key | External dependencies |
+|---|---|---|---|---|
+| 01 | Tokenization | ❌ | ❌ | None |
+| 02 | Hello World (prompting) | ❌ | ✅ OpenAI / Gemini | None |
+| 03 | Ollama + FastAPI | ❌ | ❌ | **Ollama installed locally** |
+| 04 | HuggingFace | ❌ | ❌ | ~10 GB model download on first run |
+| 05 | Weather Agent | ❌ | ✅ OpenAI | None |
+| 06 | CLI Coding Agent | ❌ | ✅ OpenAI | None |
+| 07 | RAG | ✅ Qdrant | ✅ OpenAI | None |
+| 08 | RAG + Redis Queue | ✅ Valkey + Qdrant + Redis Insight | ✅ OpenAI | Node.js for frontend |
+| 09 | Multimodal AI | ❌ | ✅ OpenAI | None |
+| 10 | LangGraph | ✅ MongoDB + Mongo Express | ✅ OpenAI / Gemini | None |
+| 11 | Memory Agent (mem0) | ✅ Qdrant | ✅ OpenAI | None |
+
+---
+
+## Port Reference
+
+Across all projects these ports are used. **Stop containers from one project before starting another if ports conflict.**
+
+| Port | Service | Used in |
+|---|---|---|
+| `5173` | React dev server | 08 |
+| `5540` | Redis Insight | 08 |
+| `6333` | Qdrant | 07, 08, 11 |
+| `6379` | Valkey / Redis | 08 |
+| `8000` | FastAPI server | 03, 08 |
+| `8081` | Mongo Express | 10 |
+| `9181` | RQ Dashboard | 08 (optional) |
+| `11434` | Ollama | 03 |
+| `27017` | MongoDB | 10 |
+
+To stop all Docker containers from a project:
+```bash
+cd <project-folder>
+docker compose down
+```
+
+To kill a process holding a port:
+- **Mac/Linux:** `lsof -ti :<PORT> | xargs kill -9`
+- **Windows (PowerShell):** `Get-NetTCPConnection -LocalPort <PORT> | Stop-Process -Id { $_.OwningProcess } -Force`
+
+---
+
+## Project Details
+
+### 01 — Tokenization
 
 **File:** `01_Tokenization/main.py`
 
@@ -31,19 +225,20 @@ Explores how LLMs break text into tokens using OpenAI's `tiktoken` library.
 
 - Encodes a string into token IDs
 - Decodes token IDs back into readable text
-- Counts the number of tokens in a string
+- Counts the number of tokens
 
+**Run:**
 ```bash
 python 01_Tokenization/main.py
 ```
 
 ---
 
-## 02 — Hello World (Prompting Techniques)
+### 02 — Hello World (Prompting Techniques)
 
 **Files:** `02_hello_world/01_main.py` through `09_alpaca_prompt.py`
 
-A series of scripts exploring different prompting strategies with the OpenAI API.
+A series of scripts exploring different prompting strategies.
 
 | File | Technique |
 |---|---|
@@ -53,422 +248,348 @@ A series of scripts exploring different prompting strategies with the OpenAI API
 | `04_system_prompt.py` | Using system prompts to set behaviour |
 | `05_few_shot_prompting.py` | Providing examples to guide responses |
 | `06_structured_output.py` | Forcing JSON structured output |
-| `07_chain_of_thought_prompting.py` | Step-by-step reasoning loop with plan → output |
+| `07_chain_of_thought_prompting.py` | Step-by-step reasoning with plan → output |
 | `08_persona_based_prompt.py` | Giving the model a specific persona |
 | `09_alpaca_prompt.py` | Alpaca-style instruction prompting |
 
+**Setup:** Create `02_hello_world/.env` with your `OPENAI_API_KEY` (and `GEMINI_API_KEY` if running the Gemini script).
+
+**Run:**
 ```bash
 python 02_hello_world/07_chain_of_thought_prompting.py
 ```
 
 ---
 
-## 03 — Ollama + FastAPI
+### 03 — Ollama + FastAPI
 
 **File:** `03_ollama_fastapi/server.py`
 
-A FastAPI server that connects to a locally running Ollama instance and serves a chat endpoint backed by the `gemma:2b` model.
+A FastAPI server that proxies chat to a locally running Ollama instance.
 
-- `GET /` — health check
-- `POST /chat` — sends a message to the local Gemma model and returns the response
+**Setup:**
+1. Install Ollama from https://ollama.com/download
+2. Pull the model:
+   ```bash
+   ollama pull gemma:2b
+   ```
+3. Make sure Ollama is running (its tray icon should be visible, or run `ollama serve`).
 
-**Requirements:** Ollama must be running locally on port `11434`.
-
+**Run the server:**
 ```bash
 uvicorn 03_ollama_fastapi.server:app --reload
 ```
 
+Visit `http://localhost:8000/docs` and try `POST /chat`.
+
 ---
 
-## 04 — HuggingFace
+### 04 — HuggingFace
 
 **Files:** `04_huggingface/main.py`, `gemma.py`, `gemma_4.py`
 
-Experiments with loading and running open-source models directly from HuggingFace using the `transformers` library.
+Runs open-source models locally via the `transformers` library.
 
-- Loads `google/flan-t5-xl` via the `pipeline` API
-- Runs text generation locally without any external API
+**⚠️ First run downloads ~10 GB** of model weights for `google/flan-t5-xl`. Make sure you have disk space and a fast internet connection.
 
+**Run:**
 ```bash
 python 04_huggingface/main.py
 ```
 
 ---
 
-## 05 — Weather Agent
+### 05 — Weather Agent
 
 **Files:** `05_weather_agent/main.py`, `weather.py`
 
-A streaming AI agent with chain-of-thought reasoning that answers weather queries, including support for landmarks and ambiguous locations.
+A streaming agent with chain-of-thought reasoning that fetches weather data for cities or landmarks.
 
 **How it works:**
-1. User asks about weather for any city or landmark
-2. Agent reasons step-by-step (displayed live via streaming)
-3. Calls `search_locations` tool to geocode the query
-4. Calls `get_weather` tool to fetch live weather data
-5. Presents the result with full location context
+1. User asks about weather (city, landmark, monument, etc.)
+2. Agent reasons step-by-step (streamed live)
+3. Calls `search_locations` (Open-Meteo Geocoding) to resolve coordinates
+4. Calls `get_weather` (Open-Meteo Forecast) for live data
+5. Presents result with full location context
 
-**Tools used:**
-- Open-Meteo Geocoding API — resolves city/landmark names to coordinates
-- Open-Meteo Weather API — fetches live weather data
+No external API keys needed beyond OpenAI — Open-Meteo is free and key-less.
 
+**Run:**
 ```bash
 python 05_weather_agent/main.py
 ```
 
 ---
 
-## 06 — CLI Coding Agent
+### 06 — CLI Coding Agent
 
 **File:** `06_cli_agent/main.py`
 
-A terminal-based AI agent that scaffolds project folder structures and writes code files on demand, narrating every step out loud (chain-of-thought).
-
-**How it works:**
-1. User describes a project (e.g. "create a Flask REST API")
-2. Agent plans the structure step-by-step
-3. Announces each action before executing it
-4. Creates folders and writes complete code files
+A terminal-based agent that scaffolds project folders and writes code, narrating every step out loud.
 
 **Tools the agent has:**
+
 | Tool | What it does |
 |---|---|
-| `create_folder` | Creates directories (including nested) |
-| `create_file` | Writes complete files with content |
+| `create_folder` | Creates directories (incl. nested) |
+| `create_file` | Writes complete files |
 | `list_directory` | Lists folder contents |
 | `read_file` | Reads existing files before modifying |
 
-All projects are created inside the `Python-AI/` root directory.
+All scaffolded projects land in the `Python-AI/` root.
 
+**Run:**
 ```bash
 python 06_cli_agent/main.py
 ```
 
 ---
 
-## 07 — RAG (Retrieval Augmented Generation)
+### 07 — RAG (Retrieval Augmented Generation)
 
 **Files:** `07_RAG/index.py`, `07_RAG/query.py`
 
-A RAG pipeline that lets you query a PDF document using natural language. Uses Qdrant as the vector database and OpenAI for embeddings and answer generation.
+Queries a PDF using natural language. Uses Qdrant + OpenAI.
 
-**Infrastructure:** `docker-compose.yml` runs Qdrant on port `6333`.
-
-### index.py — Ingestion
-1. Loads the PDF page by page using `PyPDFLoader`
-2. Splits it into chunks of 1500 characters with 200-character overlap using `RecursiveCharacterTextSplitter`
-3. Embeds each chunk using OpenAI `text-embedding-3-small`
-4. Stores all embeddings in Qdrant under the collection `node_js_guide`
-
-### query.py — Retrieval
-1. Takes a user question as input
-2. Embeds the question and runs similarity search against Qdrant
-3. Retrieves the top matching chunks along with page numbers
-4. Passes the chunks as context to `gpt-4o-mini`
-5. Returns the answer with page citations
-
+**Setup (run order matters!):**
 ```bash
-# Start Qdrant
-docker compose -f 07_RAG/docker-compose.yml up -d
-
-# Index the PDF (run once)
-python 07_RAG/index.py
-
-# Query
-python 07_RAG/query.py
-```
-
----
-
-## 08 — RAG with Redis Queue
-
-**Folders:** `08_RAG_queue/queues/`, `08_RAG_queue/client/`, `08_RAG_queue/frontend/`
-
-An extended RAG pipeline that introduces a job queue so queries are processed asynchronously in the background. Includes a FastAPI backend and a React frontend.
-
-### Folder Structure
-
-```
-08_RAG_queue/
-├── docker-compose.yml    — infrastructure
-├── .env                  — OpenAI API key
-├── index.py              — PDF ingestion (run once)
-├── client/
-│   └── rq_client.py      — CLI client (alternative to frontend)
-├── queues/
-│   ├── __init__.py       — makes queues a Python package
-│   ├── main.py           — starts the FastAPI server
-│   ├── server.py         — API routes
-│   └── worker.py         — RAG logic (runs in background)
-└── frontend/
-    └── src/App.jsx       — React UI
-```
-
----
-
-### docker-compose.yml — Infrastructure
-
-Runs 3 containers:
-
-| Container | Port | Purpose |
-|---|---|---|
-| Valkey (Redis) | `6379` | Job queue and result store |
-| Qdrant | `6333` | Vector database for PDF embeddings |
-| Redis Insight | `5540` | Visual browser to inspect Valkey data |
-
----
-
-### index.py — PDF Ingestion (run once)
-
-This is the setup step. It:
-1. Loads the PDF page by page using `PyPDFLoader`
-2. Splits it into chunks of 1500 characters with 200 character overlap using `RecursiveCharacterTextSplitter`
-3. Sends each chunk to OpenAI `text-embedding-3-small` to convert text → vector numbers
-4. Stores all vectors in Qdrant under a collection called `node_js_guide`
-
-After this runs, Qdrant holds the entire PDF as searchable vectors. You only need to run this once.
-
----
-
-### queues/ — The Backend Package
-
-#### `__init__.py`
-Empty file. Tells Python that `queues` is a package so relative imports like `from .server import app` work.
-
-#### `main.py` — Server Entry Point
-Starts the FastAPI server via uvicorn on port `8000`. Run with:
-```bash
-python -m queues.main
-```
-
-#### `server.py` — API Routes
-
-Three routes:
-
-- **`GET /`** — health check, returns `{"status": "server up and running"}`
-- **`POST /query`** — receives `{"query": "..."}`, puts it on the Valkey queue, and immediately returns a `job_id`. Does not wait for the answer.
-- **`GET /result/{job_id}`** — checks Valkey for the job status. Returns `pending`, `completed` with the answer, or `failed`.
-
-CORS middleware is added so the React frontend on port `5173` is allowed to talk to the server on port `8000`.
-
-#### `worker.py` — The RAG Brain
-
-This is the most important file. The `process_query` function runs when a job is picked up from the queue:
-
-1. **Similarity search** — embeds the query and searches Qdrant for the 8 most similar chunks from the PDF
-2. **Score filtering** — drops any chunk with a relevance score below 0.3. Falls back to top 3 if all score low
-3. **Context building** — formats the retrieved chunks with their page numbers and scores
-4. **LLM call** — sends the context + question to `gpt-4o` and instructs it to cite page numbers
-5. **Returns** the answer string, which RQ stores back in Valkey
-
----
-
-### client/rq_client.py — CLI Client
-
-A terminal-based alternative to the React frontend. Connects directly to Valkey and enqueues jobs via the RQ Queue.
-
----
-
-### frontend/src/App.jsx — React UI
-
-Two pieces of state:
-- `query` — what the user is typing
-- `jobs` — list of all submitted queries and their current status/result
-
-**`submitQuery()`**
-- Sends `POST /query` to the FastAPI server
-- Gets back a `job_id` instantly
-- Adds the job to the `jobs` list with status `pending`
-- Clears the input so you can type another query immediately
-- Starts polling for that job's result
-
-**`pollResult(jobId)`**
-- Calls `GET /result/{job_id}` every 1.5 seconds
-- When status becomes `completed` or `failed`, stops polling and updates the job card with the answer
-
-**UI**
-- Each submitted query shows as a card with a colour-coded badge — yellow for pending, green for completed, red for failed
-- Multiple queries can be submitted at once, each tracked independently
-
----
-
-### The Full Flow
-
-```
-1. User types query in React UI
-           ↓
-2. POST /query → FastAPI server
-           ↓
-3. Job pushed to Valkey queue → job_id returned instantly
-           ↓
-4. RQ Worker picks up the job
-           ↓
-5. Qdrant similarity search (top 8 chunks, filtered by score)
-           ↓
-6. gpt-4o generates answer using chunks as context
-           ↓
-7. Answer stored back in Valkey
-           ↓
-8. React polls GET /result/{job_id} every 1.5s
-           ↓
-9. Answer displayed in the UI card
-```
-
----
-
-### Running the full pipeline
-
-```bash
-# 1. Start containers
-cd 08_RAG_queue
+# 1. Start Qdrant
+cd 07_RAG
 docker compose up -d
 
-# 2. Index the PDF (run once)
+# 2. Embed the PDF into Qdrant (run ONCE)
 python index.py
 
-# 3. Start FastAPI server
-python -m queues.main
-
-# 4. Start RQ worker (separate terminal)
-rq worker
-
-# 5. Start React frontend (separate terminal)
-cd frontend
-npm run dev
+# 3. Query
+python query.py
 ```
 
-Open `http://localhost:5173` to use the UI.
+`index.py` only needs to be run once — embeddings persist in Qdrant. Use `query.py` for all subsequent questions.
 
-**Optional monitoring:**
+Qdrant dashboard: `http://localhost:6333/dashboard`
+
+---
+
+### 08 — RAG with Redis Queue
+
+An async RAG pipeline with FastAPI + RQ workers + React frontend. Probably the most involved project — read carefully.
+
+#### Folder Structure
+```
+08_RAG_queue/
+├── docker-compose.yml    — infrastructure (Valkey, Qdrant, Redis Insight)
+├── .env                  — OpenAI API key
+├── index.py              — PDF ingestion (run once)
+├── client/rq_client.py   — CLI client (alternative to frontend)
+├── queues/
+│   ├── main.py           — FastAPI entry point
+│   ├── server.py         — API routes
+│   └── worker.py         — RAG logic (runs as RQ worker)
+└── frontend/             — React (Vite) UI
+```
+
+#### Containers
+| Container | Port | Purpose |
+|---|---|---|
+| Valkey (Redis-compatible) | 6379 | Job queue + result store |
+| Qdrant | 6333 | Vector DB for PDF chunks |
+| Redis Insight | 5540 | Browser UI for Valkey |
+
+#### Run the full pipeline
+
+You'll need **4 terminals**, all with the venv activated:
+
 ```bash
-# RQ Dashboard — view job queues in real time
+# Terminal 1 — Infrastructure
+cd 08_RAG_queue
+docker compose up -d
+python index.py           # ingest PDF (once)
+python -m queues.main     # start FastAPI server (port 8000)
+
+# Terminal 2 — Worker
+cd 08_RAG_queue
+rq worker
+
+# Terminal 3 — Frontend
+cd 08_RAG_queue/frontend
+npm install               # first time only
+npm run dev               # opens at http://localhost:5173
+
+# Terminal 4 — (Optional) RQ Dashboard
+pip install rq-dashboard  # first time only
 rq-dashboard --redis-url redis://localhost:6379
 # Open http://localhost:9181
 ```
 
-### Scaling workers
+Open `http://localhost:5173` to use the chat UI.
 
-To process multiple queries simultaneously, run multiple workers:
+#### Scaling workers
+Run multiple workers for parallel job processing:
+
+**Mac/Linux:**
 ```bash
 for i in {1..4}; do rq worker & done
 ```
 
+**Windows (PowerShell):**
+```powershell
+1..4 | ForEach-Object { Start-Process -NoNewWindow rq -ArgumentList "worker" }
+```
+
+#### End-to-end flow
+```
+React UI → POST /query → FastAPI → Valkey queue → RQ Worker → Qdrant search → gpt-4o
+                                          ↑                                       ↓
+                                          └───── result stored in Valkey ←────────┘
+                                                            ↓
+                                          React polls GET /result/{job_id}
+```
+
 ---
 
-## 09 — Multimodal AI
+### 09 — Multimodal AI
 
 **File:** `09_multimodal_ai/main.py`
 
-A short example of using OpenAI's vision-capable model to caption an image from a URL.
+Captioning images using OpenAI's vision-capable model `gpt-4.1-mini`. Sends an image URL alongside a text prompt.
 
-- Sends an image URL alongside a text prompt
-- Uses `gpt-4.1-mini` with `content` blocks containing both `text` and `image_url`
-- Returns a natural language description of the image
-
+**Run:**
 ```bash
 python 09_multimodal_ai/main.py
 ```
 
 ---
 
-## 10 — LangGraph
+### 10 — LangGraph
 
-**Folder:** `10_langgraph/`
+A progressive intro to **LangGraph**: graph-based orchestration for branching, looping, and stateful LLM workflows.
 
-A progressive introduction to **LangGraph**, the graph-based orchestration framework for building branching, looping, and stateful LLM workflows.
-
-**Infrastructure:** `docker-compose.yml` runs MongoDB + Mongo Express for checkpointing.
+#### Files
 
 | File | What it demonstrates |
 |---|---|
-| `main.py` | Simplest possible graph — `START → chatbot → END` with one LLM call |
-| `conditional.py` | Conditional edges — calls OpenAI, judges the answer, falls back to Gemini if unsatisfactory |
-| `chat_checkpoint.py` | MongoDB-backed checkpointing — conversations persist across runs via `thread_id` |
-| `multi_user_chat.py` | One shared graph, isolated memory per user — switch users mid-session with `/user <name>` |
+| `main.py` | Simplest graph: `START → chatbot → END` |
+| `conditional.py` | Conditional edges + LLM-as-judge with Gemini fallback |
+| `chat_checkpoint.py` | MongoDB-backed checkpointing — conversation memory persists across runs |
+| `multi_user_chat.py` | Shared graph, isolated memory per user via `thread_id` |
 
-### Key concepts
+#### Key concepts
 
-- **`StateGraph`** — defines the graph schema and nodes
-- **`add_node` / `add_edge`** — wires nodes together
-- **`add_conditional_edges`** — branches dynamically based on a routing function
-- **`Annotated[list, add_messages]`** — reducer that appends new messages instead of overwriting
-- **`MongoDBSaver`** — persists every state checkpoint to MongoDB
-- **`thread_id`** — the key used to isolate one user/conversation from another
+- `StateGraph` — defines the graph schema
+- `add_node` / `add_edge` — wires nodes
+- `add_conditional_edges` — dynamic routing based on a router function
+- `Annotated[list, add_messages]` — reducer that appends messages instead of overwriting
+- `MongoDBSaver` — persists state to MongoDB
+- `thread_id` — isolates conversations per user
 
-### Running
-
+#### Setup
 ```bash
-# Start MongoDB + Mongo Express
 cd 10_langgraph
-docker compose up -d
+docker compose up -d      # MongoDB + Mongo Express
+```
 
-# Run a script
+#### Run any script
+```bash
 python main.py
-python conditional.py
+python conditional.py     # needs GEMINI_API_KEY in .env
 python chat_checkpoint.py
 python multi_user_chat.py
 ```
 
-Mongo Express UI is at `http://localhost:8081` (login `admin` / `admin`).
+Mongo Express UI at `http://localhost:8081` (login `admin` / `admin`).
+
+> **Tip — multi-user chat:** in `multi_user_chat.py`, log in as `alice`, chat, then type `/user bob` to switch users. Bob has a separate, isolated memory. Switch back to `alice` and her history returns.
 
 ---
 
-## 11 — Memory Agent (mem0)
+### 11 — Memory Agent (mem0)
 
 **File:** `11_memory_agent(mem0)/mem.py`
 
-Demonstrates persistent, fact-based memory using **mem0** — a memory layer for AI agents that extracts and stores facts about users, then retrieves only the relevant ones via vector search.
+Persistent fact-based memory using **mem0** — extracts and stores facts about the user in Qdrant, retrieves only relevant ones via vector search.
 
-**Infrastructure:** `docker-compose.yml` runs Qdrant on port `6333` for storing memory vectors.
-
-### How it works
-
-1. User sends a message
-2. `mem_client.search(...)` runs vector similarity search in Qdrant to fetch relevant remembered facts
-3. Those facts are injected into the system prompt
-4. LLM generates a response with full awareness of past conversations
-5. `mem_client.add(...)` extracts new facts from the latest exchange and stores them
-
-### mem0 vs LangGraph checkpointing
+#### mem0 vs LangGraph checkpointing
 
 | Feature | LangGraph Checkpointer | mem0 |
 |---|---|---|
-| Stores | Raw messages and full state snapshots | Extracted facts only |
+| Stores | Raw messages + full state | Extracted facts only |
 | Retrieval | Loads entire history by `thread_id` | Vector search — only relevant facts |
 | Scaling | Grows with conversation length | Stays compact long-term |
 | Best for | Resumable workflows, replay | Long-term personalization |
 
-### Running
-
+#### Setup
 ```bash
-# Start Qdrant
-cd "11_memory_agent(mem0)"
-docker compose up -d
-
-# Run the agent
+cd "11_memory_agent(mem0)"          # quote the folder name!
+docker compose up -d                 # starts Qdrant
 python mem.py
 ```
 
-Try telling it your name, age, and preferences over multiple turns, then ask it to recall something you said earlier — even after restarting the script.
+**Windows users:** the folder has parentheses — quote it everywhere:
+```powershell
+cd "11_memory_agent(mem0)"
+```
+
+#### Try it
+```
+> Hi, I'm Jayanth and I love south Indian food
+> I am 28 years old
+> What's my favorite cuisine and how old am I?
+```
+
+Even after exiting and restarting, the memory persists in Qdrant.
 
 ---
 
-## Setup
+## Troubleshooting
 
-### Prerequisites
-- Python 3.10+
-- Node.js 18+
-- Docker
+### Common errors and what they mean
 
-### Install Python dependencies
-```bash
-python -m venv venv
-source venv/bin/activate
-pip install -r requirements.txt
-```
+| Error | Cause | Fix |
+|---|---|---|
+| `Connection refused` on a port | Docker container isn't running | `docker compose up -d` in the project folder |
+| `Cannot connect to the Docker daemon` | Docker Desktop isn't running | Start Docker Desktop (or `sudo systemctl start docker`) |
+| `ModuleNotFoundError: ...` | venv not activated, or package not installed | Activate venv, then `pip install -r requirements.txt` |
+| `OPENAI_API_KEY not found` / `AuthenticationError` | `.env` is missing or in wrong folder | Create `.env` in the project's own folder, not at root |
+| `Cannot use MongoClient after close` | `with` block closed the Mongo connection | Keep `.invoke()` inside the `with` block |
+| `Bind for 0.0.0.0:PORT failed: port is already allocated` | Another container/process holds the port | `docker compose down` in other projects, or kill the process |
+| `pymongo.errors.ServerSelectionTimeoutError` | MongoDB isn't running | Start MongoDB container: `docker compose up -d` |
+| `ValueError: filters must contain at least one of: user_id...` | mem0 search call missing `user_id` filter | Pass `filters={"user_id": "..."}` |
+| `LangChainDeprecationWarning` | Just a warning, not an error | Ignore, or upgrade to non-deprecated import path |
+| `Set-ExecutionPolicy` error (Windows) | PowerShell blocking venv activation | Run `Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass` |
+| `ollama: command not found` | Ollama not installed | Install from https://ollama.com/download |
 
-### Environment variables
-Each project folder that uses an API key needs a `.env` file:
-```
-OPENAI_API_KEY=your_key_here
-```
+### General debugging steps
+
+1. **Verify venv is active** — your shell prompt should start with `(venv)`.
+2. **Verify Docker is running** — `docker ps` should list containers (or be empty without erroring).
+3. **Check ports** — `docker ps` shows which ports each container exposes.
+4. **Check `.env` location** — must be in the project folder, not the root (unless the script's `load_dotenv()` says otherwise).
+5. **Re-read the error** — Python tracebacks are usually precise about the file and line number.
+
+---
+
+## Tips & Conventions
+
+- **Always activate venv** before running any project: `(venv)` should appear in your prompt.
+- **One project at a time** for Docker — to avoid port conflicts, `docker compose down` an old project before bringing up a new one.
+- **API keys live in per-folder `.env` files** — never at the root, never hardcoded.
+- **First run of `index.py`** in `07_RAG` and `08_RAG_queue` is required before querying; embeddings persist in Qdrant.
+- **HuggingFace download size** in `04_huggingface` is ~10 GB — have disk space ready.
+- **Stop containers when done**:
+  ```bash
+  docker compose down
+  ```
+- **Free up Docker disk space** periodically:
+  ```bash
+  docker system prune -a --volumes
+  ```
+
+---
+
+## License
+
+Personal learning project. Not licensed for production use.
+
+## Contact
+
+Built by **Jayanth Appalla** — feel free to open issues or PRs on GitHub.
