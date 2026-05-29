@@ -4,6 +4,8 @@ A progressive series of AI and LLM projects built with Python — covering token
 
 Designed as a learning track: start at `01_Tokenization` and work your way to `11_memory_agent`.
 
+> 📚 **For theory & definitions:** see [CONCEPTS.md](CONCEPTS.md) — a glossary explaining every concept used across the projects (tokens, embeddings, RAG, LangGraph, checkpointing, mem0, etc.) with cross-links back to the projects that use them.
+
 ---
 
 ## Table of Contents
