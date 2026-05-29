@@ -15,7 +15,10 @@ Python-AI/
 ├── 05_weather_agent/
 ├── 06_cli_agent/
 ├── 07_RAG/
-└── 08_RAG_queue/
+├── 08_RAG_queue/
+├── 09_multimodal_ai/
+├── 10_langgraph/
+└── 11_memory_agent(mem0)/
 ```
 
 ---
@@ -349,6 +352,104 @@ To process multiple queries simultaneously, run multiple workers:
 ```bash
 for i in {1..4}; do rq worker & done
 ```
+
+---
+
+## 09 — Multimodal AI
+
+**File:** `09_multimodal_ai/main.py`
+
+A short example of using OpenAI's vision-capable model to caption an image from a URL.
+
+- Sends an image URL alongside a text prompt
+- Uses `gpt-4.1-mini` with `content` blocks containing both `text` and `image_url`
+- Returns a natural language description of the image
+
+```bash
+python 09_multimodal_ai/main.py
+```
+
+---
+
+## 10 — LangGraph
+
+**Folder:** `10_langgraph/`
+
+A progressive introduction to **LangGraph**, the graph-based orchestration framework for building branching, looping, and stateful LLM workflows.
+
+**Infrastructure:** `docker-compose.yml` runs MongoDB + Mongo Express for checkpointing.
+
+| File | What it demonstrates |
+|---|---|
+| `main.py` | Simplest possible graph — `START → chatbot → END` with one LLM call |
+| `conditional.py` | Conditional edges — calls OpenAI, judges the answer, falls back to Gemini if unsatisfactory |
+| `chat_checkpoint.py` | MongoDB-backed checkpointing — conversations persist across runs via `thread_id` |
+| `multi_user_chat.py` | One shared graph, isolated memory per user — switch users mid-session with `/user <name>` |
+
+### Key concepts
+
+- **`StateGraph`** — defines the graph schema and nodes
+- **`add_node` / `add_edge`** — wires nodes together
+- **`add_conditional_edges`** — branches dynamically based on a routing function
+- **`Annotated[list, add_messages]`** — reducer that appends new messages instead of overwriting
+- **`MongoDBSaver`** — persists every state checkpoint to MongoDB
+- **`thread_id`** — the key used to isolate one user/conversation from another
+
+### Running
+
+```bash
+# Start MongoDB + Mongo Express
+cd 10_langgraph
+docker compose up -d
+
+# Run a script
+python main.py
+python conditional.py
+python chat_checkpoint.py
+python multi_user_chat.py
+```
+
+Mongo Express UI is at `http://localhost:8081` (login `admin` / `admin`).
+
+---
+
+## 11 — Memory Agent (mem0)
+
+**File:** `11_memory_agent(mem0)/mem.py`
+
+Demonstrates persistent, fact-based memory using **mem0** — a memory layer for AI agents that extracts and stores facts about users, then retrieves only the relevant ones via vector search.
+
+**Infrastructure:** `docker-compose.yml` runs Qdrant on port `6333` for storing memory vectors.
+
+### How it works
+
+1. User sends a message
+2. `mem_client.search(...)` runs vector similarity search in Qdrant to fetch relevant remembered facts
+3. Those facts are injected into the system prompt
+4. LLM generates a response with full awareness of past conversations
+5. `mem_client.add(...)` extracts new facts from the latest exchange and stores them
+
+### mem0 vs LangGraph checkpointing
+
+| Feature | LangGraph Checkpointer | mem0 |
+|---|---|---|
+| Stores | Raw messages and full state snapshots | Extracted facts only |
+| Retrieval | Loads entire history by `thread_id` | Vector search — only relevant facts |
+| Scaling | Grows with conversation length | Stays compact long-term |
+| Best for | Resumable workflows, replay | Long-term personalization |
+
+### Running
+
+```bash
+# Start Qdrant
+cd "11_memory_agent(mem0)"
+docker compose up -d
+
+# Run the agent
+python mem.py
+```
+
+Try telling it your name, age, and preferences over multiple turns, then ask it to recall something you said earlier — even after restarting the script.
 
 ---
 
