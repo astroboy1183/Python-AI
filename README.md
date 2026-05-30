@@ -1,8 +1,8 @@
 # Python AI
 
-A progressive series of AI and LLM projects built with Python — covering tokenization, prompting techniques, local models, AI agents, RAG pipelines, async job queues, multimodal inputs, graph-based agents (LangGraph), and persistent memory (mem0).
+A progressive series of AI and LLM projects built with Python — covering tokenization, prompting techniques, local models, AI agents, RAG pipelines, async job queues, multimodal inputs, graph-based agents (LangGraph), persistent memory (mem0 + Neo4j graphs), and voice-driven conversational AI.
 
-Designed as a learning track: start at `01_Tokenization` and work your way to `11_memory_agent`.
+Designed as a learning track: start at `01_Tokenization` and work your way to `12_Conversational_AI`.
 
 > 📚 **For theory & definitions:** see [CONCEPTS.md](CONCEPTS.md) — a glossary explaining every concept used across the projects (tokens, embeddings, RAG, LangGraph, checkpointing, mem0, etc.) with cross-links back to the projects that use them.
 
@@ -57,7 +57,11 @@ python 01_Tokenization/main.py
 - **Git** ([git-scm.com](https://git-scm.com/))
 - **Docker Desktop** (required for projects 07–11) ([docker.com/products/docker-desktop](https://www.docker.com/products/docker-desktop/))
 - **Node.js 18+** (only needed for `08_RAG_queue` React frontend) ([nodejs.org](https://nodejs.org/))
-- ~15 GB free disk space (projects `04_huggingface` downloads large models)
+- **ffmpeg + ffplay** (only needed for `12_Conversational_AI` audio recording/playback)
+  - Mac: `brew install ffmpeg`
+  - Linux: `sudo apt install ffmpeg`
+  - Windows: download from [ffmpeg.org/download](https://ffmpeg.org/download.html) and add to PATH
+- ~15 GB free disk space (project `04_huggingface` downloads large models)
 
 ### Windows-specific
 - Use **PowerShell** or **Windows Terminal** — avoid CMD where possible.
@@ -147,7 +151,8 @@ Each project that calls an LLM API needs its own `.env` file **in the same folde
 | `08_RAG_queue` | `OPENAI_API_KEY` |
 | `09_multimodal_ai` | `OPENAI_API_KEY` |
 | `10_langgraph` | `OPENAI_API_KEY`, `GEMINI_API_KEY` (only for `conditional.py`) |
-| `11_memory_agent(mem0)` | `OPENAI_API_KEY` |
+| `11_memory_agent(mem0)` | `OPENAI_API_KEY`, optionally `NEO4J_URI` + `NEO4J_USERNAME` + `NEO4J_PASSWORD` (for graph store) |
+| `12_Conversational_AI` | `OPENAI_API_KEY` |
 
 `01_Tokenization`, `03_ollama_fastapi`, and `04_huggingface` need **no API keys** — they run locally.
 
@@ -157,6 +162,7 @@ Each project that calls an LLM API needs its own `.env` file **in the same folde
 |---|---|
 | **OpenAI** | https://platform.openai.com/api-keys (requires billing setup) |
 | **Google Gemini** | https://aistudio.google.com/apikey (free tier available) |
+| **Neo4j Aura** (optional, for 11) | https://console.neo4j.io (free tier available) — download `.txt` credentials file when creating an instance |
 
 ### Creating `.env` files
 
@@ -185,7 +191,8 @@ GEMINI_API_KEY=AIza-your-key-here
 | 08 | RAG + Redis Queue | ✅ Valkey + Qdrant + Redis Insight | ✅ OpenAI | Node.js for frontend |
 | 09 | Multimodal AI | ❌ | ✅ OpenAI | None |
 | 10 | LangGraph | ✅ MongoDB + Mongo Express | ✅ OpenAI / Gemini | None |
-| 11 | Memory Agent (mem0) | ✅ Qdrant | ✅ OpenAI | None |
+| 11 | Memory Agent (mem0) | ✅ Qdrant | ✅ OpenAI (+ optional Neo4j Aura) | mem0 v0.1.x required (see project section) |
+| 12 | Conversational AI (voice) | ❌ | ✅ OpenAI | **ffmpeg + ffplay** for audio |
 
 ---
 
@@ -508,7 +515,7 @@ Mongo Express UI at `http://localhost:8081` (login `admin` / `admin`).
 
 **File:** `11_memory_agent(mem0)/mem.py`
 
-Persistent fact-based memory using **mem0** — extracts and stores facts about the user in Qdrant, retrieves only relevant ones via vector search.
+Persistent fact-based memory using **mem0** — extracts and stores facts about the user in Qdrant (vector store) and optionally Neo4j (graph store), retrieving only relevant ones via vector search.
 
 #### mem0 vs LangGraph checkpointing
 
@@ -518,6 +525,16 @@ Persistent fact-based memory using **mem0** — extracts and stores facts about 
 | Retrieval | Loads entire history by `thread_id` | Vector search — only relevant facts |
 | Scaling | Grows with conversation length | Stays compact long-term |
 | Best for | Resumable workflows, replay | Long-term personalization |
+
+#### ⚠️ Critical: install the right mem0 version
+
+mem0 v2.x dropped support for the Neo4j `graph_store` config we use. Install v0.1.x explicitly:
+
+```bash
+pip install "mem0ai==0.1.116" rank-bm25 langchain-neo4j neo4j
+```
+
+If you skip this, `mem0ai` will install v2.x by default and your Neo4j config will be silently ignored.
 
 #### Setup
 ```bash
@@ -531,6 +548,32 @@ python mem.py
 cd "11_memory_agent(mem0)"
 ```
 
+#### Neo4j graph store (optional but recommended)
+
+The `docker-compose.yml` only starts Qdrant. For the **graph store** (which tracks relationships between facts like `(Jayanth)-[LIKES]->(food)`), use **Neo4j Aura** (cloud, free tier):
+
+1. Sign up at https://console.neo4j.io
+2. Create a free instance — download the credentials file when prompted
+3. Add to `.env`:
+   ```
+   NEO4J_URI=neo4j+s://<your-instance>.databases.neo4j.io
+   NEO4J_USERNAME=neo4j
+   NEO4J_PASSWORD=<from-credentials-file>
+   ```
+4. Test the connection: `python test_neo4j.py`
+
+#### Persistent storage caveat
+
+The current `docker-compose.yml` for Qdrant **does NOT use a Docker volume**, meaning every `docker compose down` wipes your stored memories. To persist, add a volume:
+
+```yaml
+volumes:
+  - qdrant_data:/qdrant/storage
+
+volumes:
+  qdrant_data:
+```
+
 #### Try it
 ```
 > Hi, I'm Jayanth and I love south Indian food
@@ -538,7 +581,57 @@ cd "11_memory_agent(mem0)"
 > What's my favorite cuisine and how old am I?
 ```
 
-Even after exiting and restarting, the memory persists in Qdrant.
+Verify graph data in Neo4j Aura console with:
+```cypher
+MATCH (n)-[r]->(m) RETURN n, r, m
+```
+
+---
+
+### 12 — Conversational AI (Voice)
+
+**File:** `12_Conversational_AI/conversational_ai.py`
+
+A voice-driven conversational pipeline chaining three OpenAI APIs:
+
+```
+[mic / file / text]  →  Whisper  →  gpt-4o-mini  →  TTS (alloy voice)  →  ffplay
+```
+
+#### Three input modes
+| Option | What happens |
+|---|---|
+| 1 (mic) | Records 10s from your microphone via ffmpeg → sends to Whisper |
+| 2 (file) | Uses an existing audio file (WAV/MP3/M4A) you provide |
+| 3 (text) | Skips Whisper — type your message directly |
+
+All three then go through gpt-4o-mini → TTS → ffplay plays the spoken reply.
+
+#### Prerequisites
+- **ffmpeg + ffplay** installed (see [System Requirements](#system-requirements))
+- OpenAI API key in `12_Conversational_AI/.env`
+
+The script uses `-f pulse` for mic input which works on Linux. On Mac, change to `-f avfoundation`. On Windows, change to `-f dshow`.
+
+#### Setup
+```bash
+pip install openai python-dotenv
+```
+
+#### Run
+```bash
+python 12_Conversational_AI/conversational_ai.py
+```
+
+When prompted, pick `1` (mic), `2` (file), or `3` (text). Generated audio is saved to `12_Conversational_AI/audio/`.
+
+#### Cost per turn (approx)
+| Step | Cost |
+|---|---|
+| Whisper (10s audio) | ~$0.001 |
+| gpt-4o-mini reply | ~$0.0003 |
+| TTS-1 (alloy voice) | ~$0.008 |
+| **Total** | **~$0.01 per turn** |
 
 ---
 
@@ -551,14 +644,19 @@ Even after exiting and restarting, the memory persists in Qdrant.
 | `Connection refused` on a port | Docker container isn't running | `docker compose up -d` in the project folder |
 | `Cannot connect to the Docker daemon` | Docker Desktop isn't running | Start Docker Desktop (or `sudo systemctl start docker`) |
 | `ModuleNotFoundError: ...` | venv not activated, or package not installed | Activate venv, then `pip install -r requirements.txt` |
+| `ModuleNotFoundError: rank_bm25` | mem0 graph store missing dep | `pip install rank-bm25` |
 | `OPENAI_API_KEY not found` / `AuthenticationError` | `.env` is missing or in wrong folder | Create `.env` in the project's own folder, not at root |
 | `Cannot use MongoClient after close` | `with` block closed the Mongo connection | Keep `.invoke()` inside the `with` block |
 | `Bind for 0.0.0.0:PORT failed: port is already allocated` | Another container/process holds the port | `docker compose down` in other projects, or kill the process |
 | `pymongo.errors.ServerSelectionTimeoutError` | MongoDB isn't running | Start MongoDB container: `docker compose up -d` |
-| `ValueError: filters must contain at least one of: user_id...` | mem0 search call missing `user_id` filter | Pass `filters={"user_id": "..."}` |
+| `ValueError: filters must contain at least one of: user_id...` | mem0 v0.1.x search call missing `user_id` | Pass `user_id="..."` directly (not inside `filters={}`) |
+| mem0 not writing to Neo4j | You have mem0 v2.x which dropped `graph_store` | Downgrade: `pip install "mem0ai==0.1.116"` |
+| `ffmpeg: command not found` | ffmpeg not installed (project 12) | Mac: `brew install ffmpeg`. Linux: `sudo apt install ffmpeg`. Windows: download from ffmpeg.org |
 | `LangChainDeprecationWarning` | Just a warning, not an error | Ignore, or upgrade to non-deprecated import path |
 | `Set-ExecutionPolicy` error (Windows) | PowerShell blocking venv activation | Run `Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass` |
 | `ollama: command not found` | Ollama not installed | Install from https://ollama.com/download |
+| Neo4j `ServiceUnavailable` | Aura free instance is paused (auto-pauses after 3 days idle) | Log in at https://console.neo4j.io to wake it |
+| OpenAI `Not Available` on dashboard | You logged in via SSO which created a separate account | Use email login matching the account that has the keys |
 
 ### General debugging steps
 
