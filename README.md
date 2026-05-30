@@ -10,15 +10,62 @@ Designed as a learning track: start at `01_Tokenization` and work your way to `1
 
 ## Table of Contents
 
-1. [Quick Start](#quick-start)
-2. [System Requirements](#system-requirements)
-3. [Getting Started](#getting-started)
-4. [API Keys](#api-keys)
-5. [Per-Project Overview](#per-project-overview)
-6. [Port Reference](#port-reference)
-7. [Project Details](#project-details)
-8. [Troubleshooting](#troubleshooting)
-9. [Tips & Conventions](#tips--conventions)
+1. [Before You Start](#before-you-start)
+2. [Quick Start](#quick-start)
+3. [System Requirements](#system-requirements)
+4. [Getting Started](#getting-started)
+5. [API Keys](#api-keys)
+6. [Per-Project Overview](#per-project-overview)
+7. [Port Reference](#port-reference)
+8. [Project Details](#project-details)
+9. [Troubleshooting](#troubleshooting)
+10. [Tips & Conventions](#tips--conventions)
+
+---
+
+## Before You Start
+
+A few things that will save you hours of debugging if you read them first:
+
+### 1. OpenAI account must have credit
+OpenAI's API requires **prepaid credit** — even free-trial accounts hit a hard wall without it.
+1. Sign up at https://platform.openai.com
+2. Go to **Settings → Billing** and add **at least $5** of credit
+3. **Then** generate your API key at https://platform.openai.com/api-keys
+
+Without credit you'll get cryptic 429 / quota errors on the very first call.
+
+### 2. Use email login, not Google SSO
+OpenAI treats different login methods as **separate accounts**. If you sign up with email but later log in via Google, you'll often see "Not Available" on the dashboard because the SSO created a different shadow account with no permissions. **Stick to email + password.**
+
+### 3. Clone via HTTPS unless you have SSH set up
+The default clone command in this README uses SSH (`git@github.com:...`). If you don't have SSH keys configured with GitHub yet, **use HTTPS instead**:
+```bash
+git clone https://github.com/astroboy1183/Python-AI.git
+```
+
+### 4. `.env` files are sensitive to quotes
+**Avoid pasting from rich-text editors** (Word, Slack, mobile keyboards) — they replace `"` with smart quotes (`“ ”`) that break key parsing. Use a plain-text editor like VS Code, nano, or Notepad.
+
+A correct `.env` line looks like this — no quotes at all:
+```
+OPENAI_API_KEY=sk-proj-abc123
+```
+
+Not this:
+```
+OPENAI_API_KEY="sk-proj-abc123"   ← still works
+OPENAI_API_KEY=“sk-proj-abc123”   ← BROKEN — smart quotes
+```
+
+### 5. Install per-project, not the giant root requirements.txt
+Each project has its **own `requirements.txt`** with only what it needs. Install just the one(s) you want to run:
+
+```bash
+pip install -r 01_Tokenization/requirements.txt
+```
+
+The root `requirements.txt` includes everything (~3 GB with PyTorch). Only use it if you plan to run all 12 projects.
 
 ---
 
@@ -28,25 +75,25 @@ For the impatient — get something running in 5 minutes:
 
 **Windows (PowerShell):**
 ```powershell
-git clone git@github.com:astroboy1183/Python-AI.git
+git clone https://github.com/astroboy1183/Python-AI.git
 cd Python-AI
 python -m venv venv
 venv\Scripts\activate
-pip install -r requirements.txt
-# add your OpenAI key to .env (see "API Keys" section)
+pip install -r 01_Tokenization\requirements.txt
 python 01_Tokenization\main.py
 ```
 
 **Mac / Linux (Bash/Zsh):**
 ```bash
-git clone git@github.com:astroboy1183/Python-AI.git
+git clone https://github.com/astroboy1183/Python-AI.git
 cd Python-AI
 python -m venv venv
 source venv/bin/activate
-pip install -r requirements.txt
-# add your OpenAI key to .env (see "API Keys" section)
+pip install -r 01_Tokenization/requirements.txt
 python 01_Tokenization/main.py
 ```
+
+Project 01 has no API key requirement — it just demonstrates tokenization locally. For other projects, see the [API Keys](#api-keys) section.
 
 ---
 
@@ -119,11 +166,21 @@ You should see `(venv)` in your prompt confirming it's active.
 
 ### 3. Install Python dependencies
 
+**Recommended — install per-project (faster, ~10–100 MB each):**
+```bash
+pip install -r 01_Tokenization/requirements.txt    # for project 01
+pip install -r 07_RAG/requirements.txt              # for project 07
+# ...etc, one per project you want to run
+```
+
+Every project folder has its own `requirements.txt` with exactly what it needs.
+
+**Or install everything at once** (heavy — pulls in PyTorch ~3 GB):
 ```bash
 pip install -r requirements.txt
 ```
 
-> **Note:** Some folders (e.g. `10_langgraph/`) have their own `requirements.txt` with project-specific additions. The root one covers all common packages. Re-run `pip install -r <folder>/requirements.txt` if a folder has its own.
+> Pick the lightweight per-project approach unless you're going to run all 12 projects. The root file is convenient but downloads a lot you may not need.
 
 ### 4. Verify Docker is running (for projects 07+)
 

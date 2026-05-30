@@ -3,9 +3,12 @@ from mem0 import Memory
 import os
 from openai import OpenAI
 
-load_dotenv() 
+load_dotenv()
 client = OpenAI()
 OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
+NEO4J_URI = os.getenv("NEO4J_URI")
+NEO4J_USERNAME = os.getenv("NEO4J_USERNAME")
+NEO4J_PASSWORD = os.getenv("NEO4J_PASSWORD")
 
 config = {
     "version":"v1.1",
@@ -25,7 +28,15 @@ config = {
         "config":{"host":"localhost",
                 "port":6333,
                 "collection_name":"memory_agent_collection"}
-            }
+            },
+    "graph_store":{
+        "provider":"neo4j",
+        "config":{
+            "url": NEO4J_URI,
+            "username": NEO4J_USERNAME,
+            "password": NEO4J_PASSWORD,
+        }
+    }
 }
 
 
@@ -34,7 +45,7 @@ mem_client = Memory.from_config(config)
 while True:
     user_query = input("> ")
 
-    search_memory = mem_client.search(query=user_query, filters={"user_id": "jayanthappalla"})
+    search_memory = mem_client.search(query=user_query, user_id="jayanthappalla")
 
     memory_facts = "\n".join(f"- {m['memory']}" for m in search_memory.get("results", []))
 
