@@ -39,15 +39,21 @@ Behaviour:
 
 def create_folder(path: str) -> str:
     target = PROJECTS_ROOT / path
-    target.mkdir(parents=True, exist_ok=True)
-    return json.dumps({"ok": True, "path": str(target)})
+    try:
+        target.mkdir(parents=True, exist_ok=True)
+        return json.dumps({"ok": True, "path": str(target)})
+    except OSError as exc:
+        return json.dumps({"ok": False, "error": str(exc)})
 
 
 def create_file(path: str, content: str) -> str:
     target = PROJECTS_ROOT / path
-    target.parent.mkdir(parents=True, exist_ok=True)
-    target.write_text(content, encoding="utf-8")
-    return json.dumps({"ok": True, "path": str(target), "bytes": len(content)})
+    try:
+        target.parent.mkdir(parents=True, exist_ok=True)
+        target.write_text(content, encoding="utf-8")
+        return json.dumps({"ok": True, "path": str(target), "bytes": len(content)})
+    except OSError as exc:
+        return json.dumps({"ok": False, "error": str(exc)})
 
 
 TOOLS = [

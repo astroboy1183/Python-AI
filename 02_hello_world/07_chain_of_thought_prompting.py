@@ -1,10 +1,11 @@
 # chain-of-thought prompting:
 
+from pathlib import Path
 from dotenv import load_dotenv
 from openai import OpenAI
 import json
 
-load_dotenv()
+load_dotenv(dotenv_path=Path(__file__).parent / ".env")
 
 client = OpenAI()
 
@@ -62,26 +63,3 @@ while True:
 
 
 print("*"*50)
-
-
-# response = client.chat.completions.create(
-#     model="gpt-4o-mini",
-#     response_format={"type":"json_object"},
-#     messages=[
-#         {"role": "system", "content": SYSTEM_PROMPT},
-#         # {"role": "user", "content": "I am fine, how are you?"},
-#         {"role": "user", "content": "can you print hello world in python programming language?"},
-#         {"role":"user", "content":"Can you help me with 2/3*4+7-2*4?"},
-#         {"role":"assistant","content":json.dumps({"step": "start", "content": "Can you help me with 2/3*4+7-2*4?"})},
-#         {"role":"user", "content":json.dumps({"step": "plan", "content": "The user seems to want to solve 2/3*4+7-2*4. Let's break it down into smaller steps."})},
-#         {"role":"user", "content":json.dumps({"step": "plan", "content": "First, we need to follow the order of operations (BODMAS/BIDMAS). We'll start with the division and multiplication."})},
-#         {"role":"user", "content":json.dumps({"step": "plan", "content": "Now, let's handle the division first: 2 divided by 3 gives approximately 0.67. Then we will multiply this result by 4."})},
-#         {"role":"user", "content":json.dumps({"step": "plan", "content": "Calculating 2 divided by 3 gives approximately 0.67, and now multiplying this by 4 results in approximately 2.67."})},
-#         {"role":"user", "content":json.dumps({"step": "plan", "content": "Next, we'll add 7 to the result of the division and multiplication, resulting in 9.67."})},
-#         {"role":"user", "content":json.dumps({"step": "plan", "content": "Now, we will handle the multiplication of 2 and 4, which gives us 8."})},
-#         {"role":"user", "content":json.dumps({"step": "plan", "content": "Finally, we will subtract the result of the last multiplication (8) from the sum we previously calculated (9.67), which will give us approximately 1.67."})},
-#         {"role":"user", "content":json.dumps({"step": "output", "content": "The answer is approximately 1.67."})}
-#     ]
-# )
-
-# print(response.choices[0].message.content)
