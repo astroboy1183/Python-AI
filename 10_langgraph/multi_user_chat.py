@@ -44,48 +44,54 @@ graph_builder.add_edge("chatbot", END)
 
 DB_URI = "mongodb://admin:admin@localhost:27017"
 
-print("=" * 60)
-print("  Multi-user Chat (memory persisted in MongoDB)")
-print("=" * 60)
-print("Commands: /user <name>   /history   /quit\n")
 
-with MongoDBSaver.from_conn_string(DB_URI) as checkpointer:
-    graph = graph_builder.compile(checkpointer=checkpointer)
+def main():
+    print("=" * 60)
+    print("  Multi-user Chat (memory persisted in MongoDB)")
+    print("=" * 60)
+    print("Commands: /user <name>   /history   /quit\n")
 
-    current_user = input("Login as user: ").strip() or "guest"
-    print(f"\n→ Logged in as '{current_user}'. Start chatting!\n")
+    with MongoDBSaver.from_conn_string(DB_URI) as checkpointer:
+        graph = graph_builder.compile(checkpointer=checkpointer)
 
-    while True:
-        user_input = input(f"{current_user}: ").strip()
+        current_user = input("Login as user: ").strip() or "guest"
+        print(f"\n→ Logged in as '{current_user}'. Start chatting!\n")
 
-        if not user_input:
-            continue
+        while True:
+            user_input = input(f"{current_user}: ").strip()
 
-        # ─ Commands ─
-        if user_input.lower() == "/quit":
-            print("Goodbye!")
-            break
+            if not user_input:
+                continue
 
-        if user_input.startswith("/user "):
-            current_user = user_input[6:].strip() or "guest"
-            print(f"\n→ Switched to user '{current_user}'.\n")
-            continue
+            # ─ Commands ─
+            if user_input.lower() == "/quit":
+                print("Goodbye!")
+                break
 
-        if user_input.lower() == "/history":
+            if user_input.startswith("/user "):
+                current_user = user_input[6:].strip() or "guest"
+                print(f"\n→ Switched to user '{current_user}'.\n")
+                continue
+
+            if user_input.lower() == "/history":
+                config = {"configurable": {"thread_id": current_user}}
+                snapshot = graph.get_state(config)
+                if not snapshot.values.get("messages"):
+                    print("  (no history yet)\n")
+                else:
+                    print(f"\n── History for '{current_user}' ──")
+                    for msg in snapshot.values["messages"]:
+                        role = "you" if msg.type == "human" else "bot"
+                        print(f"  {role}: {msg.content}")
+                    print()
+                continue
+
+            # ─ Normal chat ─
             config = {"configurable": {"thread_id": current_user}}
-            snapshot = graph.get_state(config)
-            if not snapshot.values.get("messages"):
-                print("  (no history yet)\n")
-            else:
-                print(f"\n── History for '{current_user}' ──")
-                for msg in snapshot.values["messages"]:
-                    role = "you" if msg.type == "human" else "bot"
-                    print(f"  {role}: {msg.content}")
-                print()
-            continue
+            result = graph.invoke({"messages": [user_input]}, config)
+            bot_reply = result["messages"][-1].content
+            print(f"bot: {bot_reply}\n")
 
-        # ─ Normal chat ─
-        config = {"configurable": {"thread_id": current_user}}
-        result = graph.invoke({"messages": [user_input]}, config)
-        bot_reply = result["messages"][-1].content
-        print(f"bot: {bot_reply}\n")
+
+if __name__ == "__main__":
+    main()

@@ -1,8 +1,8 @@
 # Python AI
 
-A progressive series of AI and LLM projects built with Python — covering tokenization, prompting techniques, local models, AI agents, RAG pipelines, async job queues, multimodal inputs, graph-based agents (LangGraph), persistent memory (mem0 + Neo4j graphs), and voice-driven conversational AI.
+A progressive series of AI and LLM projects built with Python — covering tokenization, prompting techniques, local models, AI agents, RAG pipelines, async job queues, multimodal inputs, graph-based agents (LangGraph), persistent memory (mem0 + Neo4j graphs), voice-driven conversational AI, and a voice-driven app builder.
 
-Designed as a learning track: start at `01_Tokenization` and work your way to `12_Conversational_AI`.
+Designed as a learning track: start at `01_Tokenization` and work your way to `13_Conversational_AI_Create_Apps`.
 
 > 📚 **For theory & definitions:** see [CONCEPTS.md](CONCEPTS.md) — a glossary explaining every concept used across the projects (tokens, embeddings, RAG, LangGraph, checkpointing, mem0, etc.) with cross-links back to the projects that use them.
 
@@ -104,10 +104,11 @@ Project 01 has no API key requirement — it just demonstrates tokenization loca
 - **Git** ([git-scm.com](https://git-scm.com/))
 - **Docker Desktop** (required for projects 07–11) ([docker.com/products/docker-desktop](https://www.docker.com/products/docker-desktop/))
 - **Node.js 18+** (only needed for `08_RAG_queue` React frontend) ([nodejs.org](https://nodejs.org/))
-- **ffmpeg + ffplay** (only needed for `12_Conversational_AI` audio recording/playback)
+- **ffmpeg + ffplay** (only needed for `12_Conversational_AI` and `13_Conversational_AI_Create_Apps` audio recording/playback)
   - Mac: `brew install ffmpeg`
-  - Linux: `sudo apt install ffmpeg`
+  - Linux: `sudo apt install ffmpeg pulseaudio` (PulseAudio required for mic capture — the script uses `-f pulse`)
   - Windows: download from [ffmpeg.org/download](https://ffmpeg.org/download.html) and add to PATH
+  - **Mac/Windows mic note:** projects 12 and 13 hardcode `-f pulse`. Mac users must change it to `-f avfoundation` and Windows users to `-f dshow` in the script — see project-level READMEs.
 - ~15 GB free disk space (project `04_huggingface` downloads large models)
 
 ### Windows-specific
@@ -210,6 +211,7 @@ Each project that calls an LLM API needs its own `.env` file **in the same folde
 | `10_langgraph` | `OPENAI_API_KEY`, `GEMINI_API_KEY` (only for `conditional.py`) |
 | `11_memory_agent(mem0)` | `OPENAI_API_KEY`, optionally `NEO4J_URI` + `NEO4J_USERNAME` + `NEO4J_PASSWORD` (for graph store) |
 | `12_Conversational_AI` | `OPENAI_API_KEY` |
+| `13_Conversational_AI_Create_Apps` | `OPENAI_API_KEY` |
 
 `01_Tokenization`, `03_ollama_fastapi`, and `04_huggingface` need **no API keys** — they run locally.
 
@@ -250,6 +252,7 @@ GEMINI_API_KEY=AIza-your-key-here
 | 10 | LangGraph | ✅ MongoDB + Mongo Express | ✅ OpenAI / Gemini | None |
 | 11 | Memory Agent (mem0) | ✅ Qdrant | ✅ OpenAI (+ optional Neo4j Aura) | mem0 v0.1.x required (see project section) |
 | 12 | Conversational AI (voice) | ❌ | ✅ OpenAI | **ffmpeg + ffplay** for audio |
+| 13 | Conversational App Builder | ❌ | ✅ OpenAI | **ffmpeg + ffplay** for audio |
 
 ---
 
@@ -343,8 +346,10 @@ A FastAPI server that proxies chat to a locally running Ollama instance.
 
 **Run the server:**
 ```bash
-uvicorn 03_ollama_fastapi.server:app --reload
+cd 03_ollama_fastapi
+uvicorn server:app --reload
 ```
+> Folder names starting with a digit aren't valid Python module paths — you must `cd` into the folder first.
 
 Visit `http://localhost:8000/docs` and try `POST /chat`.
 
@@ -619,17 +624,9 @@ The `docker-compose.yml` only starts Qdrant. For the **graph store** (which trac
    ```
 4. Test the connection: `python test_neo4j.py`
 
-#### Persistent storage caveat
+#### Persistence
 
-The current `docker-compose.yml` for Qdrant **does NOT use a Docker volume**, meaning every `docker compose down` wipes your stored memories. To persist, add a volume:
-
-```yaml
-volumes:
-  - qdrant_data:/qdrant/storage
-
-volumes:
-  qdrant_data:
-```
+The `docker-compose.yml` declares a named `qdrant_data` volume, so memories survive `docker compose down`. Only `docker compose down -v` (note the `-v` flag) will wipe them.
 
 #### Try it
 ```
@@ -741,6 +738,70 @@ A 30-turn conversation typically stays under **$0.30** total.
 
 ---
 
+### 13 — Conversational App Builder
+
+**File:** `13_Conversational_AI_Create_Apps/app_builder.py`
+
+A **voice-driven coding agent**: you describe an app, it asks clarifying questions, then scaffolds the project on disk and tells you what it built. Combines the voice loop from project 12 with the tool-using coding pattern from project 06.
+
+```
+Voice/text  →  Whisper  →  gpt-4o + tools  →  creates folders/files  →  TTS  →  ffplay
+                                ↑                                            
+                  (remembers your earlier requirements)                      
+```
+
+#### Tools the agent has
+| Tool | What it does |
+|---|---|
+| `create_folder` | Makes directories (incl. nested) |
+| `create_file` | Writes complete files with content |
+
+Generated projects land in the **Python-AI root** (e.g. `Python-AI/simple-chatbot/`).
+
+#### Prerequisites
+- **ffmpeg + ffplay** (for voice mode)
+- OpenAI API key in `13_Conversational_AI_Create_Apps/.env`
+
+#### Setup
+```bash
+pip install -r 13_Conversational_AI_Create_Apps/requirements.txt
+```
+
+#### Run
+```bash
+python 13_Conversational_AI_Create_Apps/app_builder.py
+```
+
+You'll pick input mode (`1`=mic, `2`=text). The agent greets you first, then asks what to build. Keep refining via conversation — it remembers everything you've said.
+
+#### Example — a real run built a Todo app by voice
+```
+AI:  Hi! What would you like to build today?
+You: I want to build a simple todo list web app
+
+AI:  Got it! Plain HTML/CSS/JS or a framework like React?
+You: Plain HTML CSS and JavaScript please
+
+AI:  Should tasks be numbered, and would you like delete buttons?
+You: Yes numbered with delete buttons. Also can you add a dark mode toggle?
+
+AI:  Building it now.
+  📁 Creating folder: todo-app
+  📄 Writing file:   todo-app/index.html
+  📄 Writing file:   todo-app/style.css
+  📄 Writing file:   todo-app/script.js
+  📄 Writing file:   todo-app/README.txt
+
+AI:  Done! Open index.html in your browser. Tasks auto-number, each has a
+     delete button, and the dark mode toggle is at the top.
+```
+
+The agent produced a working 115-line app (HTML + CSS + JS), no manual editing needed.
+
+For the full conversation transcript, generated code, and more examples, see [13_Conversational_AI_Create_Apps/README.md](13_Conversational_AI_Create_Apps/README.md).
+
+---
+
 ## Troubleshooting
 
 ### Common errors and what they mean
@@ -757,7 +818,11 @@ A 30-turn conversation typically stays under **$0.30** total.
 | `pymongo.errors.ServerSelectionTimeoutError` | MongoDB isn't running | Start MongoDB container: `docker compose up -d` |
 | `ValueError: filters must contain at least one of: user_id...` | mem0 v0.1.x search call missing `user_id` | Pass `user_id="..."` directly (not inside `filters={}`) |
 | mem0 not writing to Neo4j | You have mem0 v2.x which dropped `graph_store` | Downgrade: `pip install "mem0ai==0.1.116"` |
-| `ffmpeg: command not found` | ffmpeg not installed (project 12) | Mac: `brew install ffmpeg`. Linux: `sudo apt install ffmpeg`. Windows: download from ffmpeg.org |
+| `ffmpeg: command not found` | ffmpeg not installed (projects 12, 13) | Mac: `brew install ffmpeg`. Linux: `sudo apt install ffmpeg`. Windows: download from ffmpeg.org |
+| `ffplay: command not found` | Some minimal ffmpeg installs exclude ffplay | Reinstall ffmpeg from the official package (Mac: `brew reinstall ffmpeg`, Linux: full ffmpeg package, not ffmpeg-minimal) |
+| HuggingFace `401 Client Error` / `gated repo` | Gated model needs accepted terms + HF token | Run `huggingface-cli login`, then accept the model's license on its HF page |
+| Smart quotes in `.env` (`OPENAI_API_KEY=“sk-...”`) | Auth fails with malformed key | Edit `.env` with a plain-text editor (VS Code, nano, Notepad) — never paste from Word/Slack |
+| Project 12/13 mic records silence on Mac/Windows | `-f pulse` is Linux only | Edit the script to `-f avfoundation` (Mac) or `-f dshow` (Windows) |
 | `LangChainDeprecationWarning` | Just a warning, not an error | Ignore, or upgrade to non-deprecated import path |
 | `Set-ExecutionPolicy` error (Windows) | PowerShell blocking venv activation | Run `Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass` |
 | `ollama: command not found` | Ollama not installed | Install from https://ollama.com/download |

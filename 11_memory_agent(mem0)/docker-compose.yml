@@ -1,3 +1,8 @@
+# Qdrant runs locally for the vector store.
+# Neo4j is intentionally NOT in this compose — the graph store uses Neo4j Aura
+# (cloud, free tier). Set NEO4J_URI, NEO4J_USERNAME, NEO4J_PASSWORD in .env.
+# See README.md "Neo4j graph store" section for setup steps.
+
 services:
   vector-db:
     image: qdrant/qdrant

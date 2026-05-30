@@ -20,7 +20,7 @@ Q: can you print hello world in python programming language?
 A: Sure, here's the code:print("Hello, World!")
 
 Q: Can you help me with a plus b whole squared formula in maths?
-A: Sure. The formula is: a^2 + b^2 = c^2.
+A: Sure. The formula is: (a + b)^2 = a^2 + 2ab + b^2.
 """
 
 response = client.chat.completions.create(

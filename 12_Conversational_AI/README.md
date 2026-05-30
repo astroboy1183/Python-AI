@@ -1,138 +1,137 @@
-# Conversational AI: Speech-to-Text → ChatGPT → Text-to-Speech
+# Conversational AI — Voice Chat with Memory
 
-A Python application that converts speech to text, processes it through ChatGPT, and converts the response back to speech.
+A continuous voice-driven chat: speech-to-text → ChatGPT (with conversation memory) → text-to-speech.
 
 ## Features
 
-- 🎤 **Speech Recognition**: Convert audio to text using OpenAI Whisper API
-- 🤖 **ChatGPT Integration**: Send text to GPT-4o-mini for intelligent responses
-- 🔊 **Text-to-Speech**: Convert ChatGPT responses back to audio using OpenAI TTS
-- 🎯 **Multiple Input Options**: Microphone, audio file, or text input
+- 🎤 **Speech recognition** via OpenAI Whisper
+- 🤖 **gpt-4o-mini** with full message history per session
+- 🔊 **Text-to-speech** via OpenAI TTS (`alloy` voice)
+- 🎯 **Three input modes**: microphone, audio file, or text
+- 🔁 **Continuous loop** — keeps the conversation going until you say `quit`
 
 ## Requirements
 
-### System Dependencies
+### System dependencies
 
 **Linux:**
 ```bash
-sudo apt-get install ffmpeg pulseaudio
+sudo apt install ffmpeg pulseaudio
 ```
+PulseAudio is required because the script uses `-f pulse` for microphone capture.
 
 **macOS:**
 ```bash
 brew install ffmpeg
 ```
+Then edit `conversational_ai.py` line 17 — change `"-f", "pulse"` to `"-f", "avfoundation"`.
 
 **Windows:**
-- Download and install FFmpeg from https://ffmpeg.org/download.html
-- Add FFmpeg to your PATH
+1. Download FFmpeg from https://ffmpeg.org/download.html and add to PATH
+2. Edit `conversational_ai.py` line 17 — change `"-f", "pulse"` to `"-f", "dshow"`
 
-### Python Dependencies
+### Python dependencies
 
 ```bash
-pip install -r requirements.txt
+pip install -r 12_Conversational_AI/requirements.txt
 ```
 
 ## Setup
 
-1. **Get OpenAI API Key**
-   - Sign up at https://platform.openai.com
-   - Create an API key in your account settings
-   - Set environment variable:
+Add your OpenAI API key to `12_Conversational_AI/.env`:
+```
+OPENAI_API_KEY=sk-proj-...
+```
 
+**Mac / Linux** (alternative to .env):
 ```bash
-export OPENAI_API_KEY="your-api-key-here"
+export OPENAI_API_KEY="sk-proj-..."
 ```
 
-Or create a `.env` file:
-```
-OPENAI_API_KEY=your-api-key-here
-```
-
-2. **Install dependencies**
-```bash
-pip install -r requirements.txt
+**Windows PowerShell** (alternative to .env):
+```powershell
+$env:OPENAI_API_KEY="sk-proj-..."
 ```
 
 ## Usage
 
-Run the main script:
 ```bash
-python conversational_ai.py
+python 12_Conversational_AI/conversational_ai.py
 ```
 
-Choose one of three input options:
+You'll be asked once for input mode:
+- **1** — Microphone (records 10 seconds per turn)
+- **2** — Audio file (you provide a path each turn)
+- **3** — Text (type each turn)
 
-1. **Microphone Recording**: Record audio directly (default 10 seconds)
-2. **Audio File**: Provide path to existing audio file (MP3, WAV, etc.)
-3. **Text Input**: Type your message directly
+The agent maintains conversation history, so it remembers what you said earlier in the same session.
 
-The program will:
-- Convert speech to text (if using audio)
-- Send to ChatGPT for processing
-- Generate audio response
-- Play the audio automatically
+## Exit
 
-## Example
+Say or type `quit`, `exit`, `goodbye`, or `bye` — or press Ctrl+C.
+
+## Example session
 
 ```
-=== Conversational AI ===
-Options:
-1. Use microphone input (record audio)
-2. Use existing audio file
-3. Use text input directly
+1=mic  2=file  3=text
+> 3
+(say 'quit' or press Ctrl+C to exit)
 
-Choose option (1-3): 1
-Recording duration in seconds (default 10): 5
-Recording for 5 seconds... Speak now!
-Audio saved to input_audio.wav
-Converting speech to text...
-Transcribed text: What is the capital of France?
-Sending to ChatGPT...
-ChatGPT response: The capital of France is Paris. It's located in northern France on the Seine River and is known as the "City of Light" for its beautiful architecture, museums, and cultural heritage.
-Converting response to speech...
-Audio response saved to response_audio.mp3
-Playing audio...
+you: Hi, my name is Jayanth
+You: Hi, my name is Jayanth
+AI:  Hi Jayanth! Nice to meet you. How can I help today?
+🔊 [audio plays]
+
+you: What's my name?
+You: What's my name?
+AI:  Your name is Jayanth.
+🔊 [audio plays]
+
+you: quit
+Goodbye!
 ```
 
-## Configuration
+## Files generated
 
-Edit `conversational_ai.py` to customize:
+| File | When |
+|---|---|
+| `audio/input.wav` | Microphone mode only |
+| `audio/response.mp3` | Always (the AI's spoken reply) |
 
-- **TTS Voice**: Change `voice` parameter (alloy, echo, fable, onyx, nova, shimmer)
-- **TTS Speed**: Adjust `speed` parameter (0.25 - 4.0)
-- **Model**: Change `model` parameter in `chat_with_gpt()` (gpt-4o-mini, gpt-4-turbo, etc.)
-- **Temperature**: Adjust creativity (0.0 - 2.0)
-- **Max Tokens**: Limit response length
+Both stored in `12_Conversational_AI/audio/` (gitignored).
 
 ## Troubleshooting
 
-**"ffmpeg not found"**
-- Install FFmpeg for your OS (see Requirements)
-- Ensure it's in your PATH
+**`ffmpeg: command not found`**
+- Install FFmpeg for your OS (see Requirements above).
 
-**"OPENAI_API_KEY not set"**
-- Set environment variable or create .env file
-- Check key is valid and has sufficient credits
+**`ffplay: command not found`**
+- On minimal installs ffplay can be separate from ffmpeg. On Debian/Ubuntu, `sudo apt install ffmpeg` includes it. On Mac, `brew install ffmpeg` includes it.
+
+**`OPENAI_API_KEY not set` / `AuthenticationError`**
+- Confirm `.env` is in `12_Conversational_AI/` (not the repo root).
+- Verify your key has credit at https://platform.openai.com/usage.
 
 **No audio from microphone**
-- Check audio device: `pactl list short sources` (Linux)
-- Ensure microphone permissions are granted
+- Linux: list inputs with `pactl list short sources`, ensure default isn't muted.
+- macOS: `system_profiler SPAudioDataType` shows audio devices.
+- Windows: Settings → Sound → Input device list.
+- Make sure the app/terminal has microphone permission.
 
-**Audio file not recognized**
-- Check file format is supported (MP3, WAV, FLAC, OGG, M4A)
-- Verify file path is correct
+**Mic mode records silence**
+- The `-f pulse` flag is Linux-only. Use `-f avfoundation` on Mac and `-f dshow` on Windows (see Requirements above).
 
-## Costs
+## Costs (approximate)
 
-Usage charges apply:
-- Whisper API: ~$0.02 per minute of audio
-- GPT-4o-mini: ~$0.15 per 1M input tokens
-- TTS: ~$0.015 per 1K characters
+| Step | Cost per turn |
+|---|---|
+| Whisper (10s audio) | ~$0.001 |
+| gpt-4o-mini reply | ~$0.0003 (grows slightly each turn as history accumulates) |
+| TTS-1 (`alloy` voice) | ~$0.008 |
+| **Total** | **~$0.01 per turn** |
 
-## Files
+A 30-turn conversation typically stays under **$0.30** total.
 
-- `conversational_ai.py` - Main script
-- `requirements.txt` - Python dependencies
-- `input_audio.wav` - Generated input recording
-- `response_audio.mp3` - Generated response audio
+## Persistence note
+
+Conversation memory is **in-process only** — exit the script and history is gone. For persistent cross-session memory, see [10_langgraph](../10_langgraph/) (checkpointing) or [11_memory_agent(mem0)](../11_memory_agent(mem0)/) (fact extraction).

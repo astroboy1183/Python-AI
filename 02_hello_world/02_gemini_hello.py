@@ -1,11 +1,14 @@
+import os
+from pathlib import Path
+from dotenv import load_dotenv
 from google import genai
 
-# The client gets the API key from the environment variable `GEMINI_API_KEY`.
-client = genai.Client(
-    api_key="AIzaSyCpbkT7jNuAR3PyFo322lPX3l9kOomRAr0",
-)
+load_dotenv(dotenv_path=Path(__file__).parent / ".env")
+
+client = genai.Client(api_key=os.getenv("GEMINI_API_KEY"))
 
 response = client.models.generate_content(
-    model="gemini-3-flash-preview", contents="Explain how AI works in a few words"
+    model="gemini-2.0-flash",
+    contents="Explain how AI works in a few words",
 )
 print(response.text)

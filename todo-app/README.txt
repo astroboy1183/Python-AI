@@ -1,0 +1,1 @@
+To run this todo app, simply open the index.html file in a web browser. You can add new tasks using the input field and button.
