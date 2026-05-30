@@ -649,20 +649,47 @@ MATCH (n)-[r]->(m) RETURN n, r, m
 
 **File:** `12_Conversational_AI/conversational_ai.py`
 
-A voice-driven conversational pipeline chaining three OpenAI APIs:
+A **continuous voice-driven chat** that chains three OpenAI APIs and remembers previous messages — so it actually feels like a conversation:
 
 ```
-[mic / file / text]  →  Whisper  →  gpt-4o-mini  →  TTS (alloy voice)  →  ffplay
+loop:
+   [mic / file / text]  →  Whisper  →  gpt-4o-mini (with history)  →  TTS  →  ffplay
+                                                ↑
+                                  remembers everything you said earlier
 ```
+
+You pick your input mode **once**, then keep chatting turn after turn. The agent has the full conversation history (system prompt + every user/assistant message) on each turn, so it can reference what you said before.
 
 #### Three input modes
-| Option | What happens |
+| Option | What happens each turn |
 |---|---|
-| 1 (mic) | Records 10s from your microphone via ffmpeg → sends to Whisper |
-| 2 (file) | Uses an existing audio file (WAV/MP3/M4A) you provide |
-| 3 (text) | Skips Whisper — type your message directly |
+| 1 (mic) | Records 10s from your microphone → sends to Whisper |
+| 2 (file) | Prompts for an audio file path each turn → Whisper |
+| 3 (text) | Type your message directly — no transcription cost |
 
 All three then go through gpt-4o-mini → TTS → ffplay plays the spoken reply.
+
+#### How conversation memory works
+The script maintains a `messages` list that grows with each turn:
+
+```python
+[
+  {"role": "system", "content": "You are a friendly conversational assistant..."},
+  {"role": "user", "content": "Hi, my name is Jayanth"},
+  {"role": "assistant", "content": "Hi Jayanth! Nice to meet you..."},
+  {"role": "user", "content": "What's my name?"},
+  {"role": "assistant", "content": "Your name is Jayanth."},
+  ...
+]
+```
+
+The entire list is sent to gpt-4o-mini on every turn, so the model has full context of what was said before.
+
+> **Memory is in-process only** — close the script and history is lost. For persistent cross-session memory, see [10_langgraph](#10--langgraph) (checkpointing) or [11_memory_agent](#11--memory-agent-mem0) (fact extraction).
+
+#### Exiting the conversation
+- Say or type **"quit"**, **"exit"**, **"goodbye"**, or **"bye"**
+- Or press **Ctrl+C**
 
 #### Prerequisites
 - **ffmpeg + ffplay** installed (see [System Requirements](#system-requirements))
@@ -672,7 +699,7 @@ The script uses `-f pulse` for mic input which works on Linux. On Mac, change to
 
 #### Setup
 ```bash
-pip install openai python-dotenv
+pip install -r 12_Conversational_AI/requirements.txt
 ```
 
 #### Run
@@ -680,15 +707,37 @@ pip install openai python-dotenv
 python 12_Conversational_AI/conversational_ai.py
 ```
 
-When prompted, pick `1` (mic), `2` (file), or `3` (text). Generated audio is saved to `12_Conversational_AI/audio/`.
+You'll be asked to pick an input mode once. Then chat naturally — each reply plays through your speakers, and the next prompt waits for your input. Generated audio is saved to `12_Conversational_AI/audio/`.
+
+**Example session:**
+```
+Pick input mode — 1=mic  2=file  3=text
+> 3
+(say 'quit' or press Ctrl+C to exit)
+
+you: Hi, my name is Jayanth and I work as an AI engineer
+You: Hi, my name is Jayanth and I work as an AI engineer
+AI:  Hi Jayanth! Great to meet you. What kind of AI work are you focused on these days?
+🔊 [audio plays]
+
+you: What did I say my name was?
+You: What did I say my name was?
+AI:  You said your name is Jayanth.
+🔊 [audio plays]
+
+you: quit
+Goodbye!
+```
 
 #### Cost per turn (approx)
 | Step | Cost |
 |---|---|
 | Whisper (10s audio) | ~$0.001 |
-| gpt-4o-mini reply | ~$0.0003 |
+| gpt-4o-mini reply | ~$0.0003 (grows slightly each turn as history accumulates) |
 | TTS-1 (alloy voice) | ~$0.008 |
 | **Total** | **~$0.01 per turn** |
+
+A 30-turn conversation typically stays under **$0.30** total.
 
 ---
 

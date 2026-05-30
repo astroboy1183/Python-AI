@@ -9,6 +9,11 @@ client = OpenAI()
 AUDIO_DIR = Path(__file__).parent / "audio"
 AUDIO_DIR.mkdir(exist_ok=True)
 
+SYSTEM_PROMPT = (
+    "You are a friendly conversational assistant. Keep replies natural and concise "
+    "(2-3 sentences) so they sound good when spoken aloud."
+)
+
 
 def record(seconds=10):
     out = AUDIO_DIR / "input.wav"
@@ -25,10 +30,10 @@ def transcribe(audio_path):
         return client.audio.transcriptions.create(model="whisper-1", file=f).text
 
 
-def chat(text):
+def chat(messages):
     return client.chat.completions.create(
         model="gpt-4o-mini",
-        messages=[{"role": "user", "content": text}],
+        messages=messages,
     ).choices[0].message.content
 
 
@@ -39,19 +44,41 @@ def speak(text):
     subprocess.run(["ffplay", "-nodisp", "-autoexit", str(out)], check=True)
 
 
-def main():
-    choice = input("1=mic  2=file  3=text\n> ").strip()
-    if choice == "1":
-        user_text = transcribe(record())
-    elif choice == "2":
-        user_text = transcribe(input("path: ").strip())
-    else:
-        user_text = input("message: ").strip()
+def get_user_input(mode):
+    if mode == "1":
+        return transcribe(record())
+    if mode == "2":
+        return transcribe(input("path: ").strip())
+    return input("you: ").strip()
 
-    print(f"\nYou: {user_text}")
-    reply = chat(user_text)
-    print(f"AI:  {reply}\n")
-    speak(reply)
+
+def main():
+    mode = input("Pick input mode — 1=mic  2=file  3=text\n> ").strip()
+    print("(say 'quit' or press Ctrl+C to exit)\n")
+
+    messages = [{"role": "system", "content": SYSTEM_PROMPT}]
+
+    while True:
+        try:
+            user_text = get_user_input(mode)
+        except (KeyboardInterrupt, EOFError):
+            print("\nGoodbye!")
+            break
+
+        if not user_text:
+            continue
+        if user_text.lower().strip(".!? ") in ("quit", "exit", "goodbye", "bye"):
+            print(f"You: {user_text}\nGoodbye!")
+            break
+
+        print(f"You: {user_text}")
+        messages.append({"role": "user", "content": user_text})
+
+        reply = chat(messages)
+        messages.append({"role": "assistant", "content": reply})
+
+        print(f"AI:  {reply}\n")
+        speak(reply)
 
 
 if __name__ == "__main__":
